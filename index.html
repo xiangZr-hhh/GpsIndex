@@ -1,0 +1,129 @@
+<!-- 前端界面---主界面 -->
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>index</title>
+    <script type="text/javascript" src="./js/echarts.min.js"></script>
+    <script type="text/javascript" src="./js/china.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.min.js
+"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 加载高德地图安全密匙 -->
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            securityJsCode: "f438fc4e98b2a10ae198e0dc1e118069",
+        }
+    </script>
+    <!-- 加载高德地图key -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=6f9fa6e44e6237a877b698dbb9d5ce3d"></script>
+</head>
+
+<body>
+    <div id="container" style="height: 705px;width: 1486px;color: black;"></div>
+</body>
+
+<script>
+    var map;
+    // 确保在页面加载完成后再执行JavaScript代码
+    window.onload = function () {
+
+        // 调用map()函数初始化地图
+        map();
+
+        // 每秒钟调用一次loadMark函数
+        setInterval(function () {
+            loadMark(map);
+        }, 1000);
+    }
+
+    function map() {
+
+        //初始化地图
+        map = new AMap.Map('container', {
+            viewMode: '3D',  // 默认使用 2D 模式
+            zoom: 17,  //初始化地图层级
+            pitch: 45,
+            center: [120.471077, 31.582275]  //初始化地图中心点
+        });
+
+
+        //安装地图插件
+        AMap.plugin(["AMap.GeoJSON", "AMap.MoveAnimation", "AMap.ToolBar", "AMap.Scale", "AMap.ControlBar", "AMap.MapType"], function () {
+            //缩略按钮插件
+            map.addControl(new AMap.ToolBar({
+                position: {
+                    top: '180px',
+                    right: '40px'
+                }
+            }))
+            //比例尺显示插件
+            map.addControl(new AMap.Scale())
+            //观察角度插件
+            map.addControl(new AMap.ControlBar())
+            //地图图层切换插件
+            map.addControl(new AMap.MapType({
+                defaultType: 1, // 0表示默认底图，1表示卫星图
+                showRoad: true // 显示路网
+            }))
+        })
+
+
+        // 3d楼层
+        var buildingsD = new AMap.Buildings;
+        map.add(buildingsD)
+
+        //初始化点标注
+        loadMark(map);
+
+    }
+
+
+
+    //初始化所有点标注(即获取所有geojson并转化为地图上的点)
+    function loadMark() {
+        getData().then(result => {
+            console.log(result);
+            var jingdu = result.data.jingdu;
+            var weidu = result.data.weidu;
+
+            console.log(jingdu);
+            console.log(weidu);
+
+            map.clearMap();
+
+            // 创建新的标记
+            var marker = new AMap.Marker({
+                position: [jingdu, weidu],
+                map: map
+            });
+
+            map.setCenter([jingdu, weidu]);
+        }).catch(error => {
+            console.error('Failed to load ', error);
+        });
+    }
+
+    //获取数据---向后端获取数据
+    function getData() {
+        return new Promise((resolve, reject) => {
+            axios.get('http://121.37.39.206:8458/gps/getNowGpsData', {
+                withCredentials: true,
+                headers: {
+                    'Access-Control-Allow-Origin': '*'
+                }
+            }).then(function (response) {
+                if (response.data.code === 200) {
+                    resolve(response.data);
+                } else {
+                    console.log(response.data);
+                    resolve(false);
+                }
+            }).catch(function (error) {
+                console.error('Request failed:', error);
+                reject(error);
+            });
+        });
+    }
+</script>
